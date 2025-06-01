@@ -14,7 +14,6 @@ import {
 import {
   AlertTriangle,
   BookOpen,
-  Calendar,
   Check,
   Clock,
   LogOut,
@@ -28,8 +27,9 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { auth, db, provider } from "./config";
 import AppNameComponent from "./components/AppName";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
+import { auth, db, provider } from "./config";
 
 const AttendancePWA = () => {
   const [user, setUser] = useState(null);
@@ -527,11 +527,11 @@ const AttendancePWA = () => {
     });
   };
 
+  // Update the header section to include the install button
   return (
     <div
       className={`min-h-screen ${isDarkMode ? "bg-gray-900" : "bg-gray-50"}`}
     >
-      {/* Header */}
       <header
         className={`${
           isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white"
@@ -543,6 +543,7 @@ const AttendancePWA = () => {
               <AppNameComponent isDarkMode={isDarkMode} size="small" />
             </div>
             <div className="flex items-center gap-4">
+              <PWAInstallPrompt isDarkMode={isDarkMode} />
               <button
                 onClick={toggleTheme}
                 className={`p-2 rounded-lg ${
