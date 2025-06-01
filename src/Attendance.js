@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { auth, db, provider } from "./config";
+import AppNameComponent from "./components/AppName";
 
 const AttendancePWA = () => {
   const [user, setUser] = useState(null);
@@ -336,18 +337,7 @@ const AttendancePWA = () => {
           } rounded-2xl shadow-xl p-8 w-full max-w-md text-center`}
         >
           <div className="mb-8">
-            <Calendar
-              className={`w-16 h-16 ${
-                isDarkMode ? "text-blue-400" : "text-blue-600"
-              } mx-auto mb-4`}
-            />
-            <h1
-              className={`text-3xl font-bold ${
-                isDarkMode ? "text-white" : "text-gray-800"
-              } mb-2`}
-            >
-              AttendanceTracker
-            </h1>
+            <AppNameComponent isDarkMode={isDarkMode} size="large" />
             <p className={`${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
               Track your class attendance with ease
             </p>
@@ -550,18 +540,7 @@ const AttendancePWA = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <Calendar
-                className={`w-8 h-8 ${
-                  isDarkMode ? "text-blue-400" : "text-blue-600"
-                }`}
-              />
-              <h1
-                className={`text-xl font-bold ${
-                  isDarkMode ? "text-white" : "text-gray-800"
-                }`}
-              >
-                My Attendance
-              </h1>
+              <AppNameComponent isDarkMode={isDarkMode} size="small" />
             </div>
             <div className="flex items-center gap-4">
               <button
