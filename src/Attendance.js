@@ -170,14 +170,14 @@ const AttendancePWA = () => {
 
   const addSubject = async (e) => {
     e.preventDefault(); // Prevent form submission
-    if (!newSubject.name || !newSubject.code || !user) return;
+    if (!newSubject.name || !user) return;
 
     try {
       setLoading((prev) => ({ ...prev, addSubject: true }));
       const subjectRef = await addDoc(collection(db, "subjects"), {
         userId: user.uid,
         name: newSubject.name,
-        code: newSubject.code,
+        code: newSubject.code || "",
         credits: parseInt(newSubject.credits) || 1,
         createdAt: new Date(),
       });
@@ -243,6 +243,40 @@ const AttendancePWA = () => {
           ...prev.attendance,
           [dateKey]: false,
         },
+      }));
+    }
+  };
+
+  const clearAttendance = async (date) => {
+    if (!user || !selectedSubject) return;
+    const dateKey = date.toISOString().split("T")[0];
+    const attendanceRef = doc(
+      db,
+      "attendance",
+      `${selectedSubject.id}_${dateKey}`
+    );
+
+    try {
+      setLoading((prev) => ({
+        ...prev,
+        attendance: { ...prev.attendance, [dateKey]: true },
+      }));
+
+      await deleteDoc(attendanceRef);
+
+      setAttendanceData((prev) => ({
+        ...prev,
+        [selectedSubject.id]: {
+          ...prev[selectedSubject.id],
+          [dateKey]: null,
+        },
+      }));
+    } catch (error) {
+      console.error("Error clearing attendance:", error);
+    } finally {
+      setLoading((prev) => ({
+        ...prev,
+        attendance: { ...prev.attendance, [dateKey]: false },
       }));
     }
   };
@@ -526,16 +560,23 @@ const AttendancePWA = () => {
       },
     });
   };
-
-  // Update the header section to include the install button
+  const isToday = (date) => {
+    const today = new Date();
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+  };
+  // Update the header section to make it sticky
   return (
     <div
       className={`min-h-screen ${isDarkMode ? "bg-gray-900" : "bg-gray-50"}`}
     >
       <header
         className={`${
-          isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white"
-        } shadow-sm border-b`}
+          isDarkMode ? "bg-gray-800/95 border-gray-700" : "bg-white/95"
+        } shadow-sm border-b sticky top-0 backdrop-blur-sm z-10`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -983,68 +1024,94 @@ const AttendancePWA = () => {
 
             {/* Calendar Grid */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              {/* Calendar Header */}
               <div className="grid grid-cols-7 gap-px bg-gray-200">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                  (day) => (
-                    <div
-                      key={day}
-                      className="bg-gray-50 p-3 text-center text-sm font-medium text-gray-700"
-                    >
-                      {day}
-                    </div>
-                  )
-                )}
+                {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
+                  <div
+                    key={day}
+                    className="bg-gray-50 p-2 sm:p-3 text-center text-sm font-medium text-gray-700"
+                  >
+                    {day}
+                  </div>
+                ))}
               </div>
+
+              {/* Calendar Days */}
               <div className="grid grid-cols-7 gap-px bg-gray-200">
                 {getDaysInMonth(selectedDate).map((day, index) => (
-                  <div key={index} className="bg-white min-h-[80px] p-2">
+                  <div
+                    key={index}
+                    className={`bg-white min-h-[60px] sm:min-h-[80px] p-1 sm:p-2 ${
+                      isToday(day)
+                        ? `${
+                            isDarkMode
+                              ? "ring-2 ring-blue-500 ring-inset"
+                              : "ring-2 ring-blue-500 ring-inset"
+                          }`
+                        : ""
+                    }`}
+                  >
                     {day && (
-                      <div className="h-full">
-                        <div className="text-sm text-gray-600 mb-2">
+                      <div className="h-full flex flex-col">
+                        <div
+                          className={`text-xs sm:text-sm mb-1 sm:mb-2 ${
+                            isToday(day)
+                              ? "font-bold text-blue-600"
+                              : "text-gray-600"
+                          }`}
+                        >
                           {day.getDate()}
                         </div>
-                        <div className="flex flex-wrap gap-1">
-                          {[
-                            "present",
-                            "absent",
-                            "half-present",
-                            "half-absent",
-                          ].map((status) => (
-                            <button
-                              key={status}
-                              onClick={() => markAttendance(day, status)}
-                              disabled={
-                                loading.attendance[
-                                  day.toISOString().split("T")[0]
-                                ]
-                              }
-                              className={`p-1 rounded transition-colors ${
-                                getAttendanceForDate(day) === status
-                                  ? "bg-blue-100 ring-2 ring-blue-500"
-                                  : "hover:bg-gray-100"
-                              } ${
-                                loading.attendance[
-                                  day.toISOString().split("T")[0]
-                                ]
-                                  ? "opacity-75 cursor-not-allowed"
-                                  : ""
-                              }`}
-                            >
-                              {loading.attendance[
-                                day.toISOString().split("T")[0]
-                              ] ? (
-                                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                              ) : (
-                                <AttendanceStatusIcon status={status} />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                        {getAttendanceForDate(day) && (
-                          <div className="mt-1">
+
+                        {/* Show status icon and clear button on mobile if attendance exists */}
+                        {getAttendanceForDate(day) ? (
+                          <div className="flex items-center justify-between mt-auto">
                             <AttendanceStatusIcon
                               status={getAttendanceForDate(day)}
                             />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                clearAttendance(day);
+                              }}
+                              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                              title="Clear attendance"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          /* Show compact attendance buttons only when no attendance exists */
+                          <div className="flex flex-wrap gap-0.5 mt-auto">
+                            {[
+                              "present",
+                              "absent",
+                              "half-present",
+                              "half-absent",
+                            ].map((status) => (
+                              <button
+                                key={status}
+                                onClick={() => markAttendance(day, status)}
+                                disabled={
+                                  loading.attendance[
+                                    day.toISOString().split("T")[0]
+                                  ]
+                                }
+                                className={`p-0.5 sm:p-1 rounded transition-colors ${
+                                  getAttendanceForDate(day) === status
+                                    ? "bg-blue-100 ring-1 ring-blue-500"
+                                    : "hover:bg-gray-100"
+                                }`}
+                              >
+                                {loading.attendance[
+                                  day.toISOString().split("T")[0]
+                                ] ? (
+                                  <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <AttendanceStatusIcon status={status} />
+                                )}
+                              </button>
+                            ))}
                           </div>
                         )}
                       </div>
