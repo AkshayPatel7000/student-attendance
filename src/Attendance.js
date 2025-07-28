@@ -561,6 +561,7 @@ const AttendancePWA = () => {
     });
   };
   const isToday = (date) => {
+    if (!date) return;
     const today = new Date();
     return (
       date.getDate() === today.getDate() &&
